@@ -1,4 +1,5 @@
 import enum
+import subprocess
 import importlib
 import json
 import logging
@@ -955,7 +956,11 @@ We could not determine the format of the file. What is it?
     3. Excel
     4. JSON
 """
-
+    
+    msg_prompt_is_hdfs = """Is this a hdfs file:
+                                1. Yes
+                                2. No
+                        """
     reader_method_file_extensions = {
         "1": "csv",
         "2": "parquet",
@@ -1027,13 +1032,25 @@ We could not determine the format of the file. What is it?
 
     path = None
     while True:
-        path = click.prompt(
-            msg_prompt_file_path,
-            type=click.Path(exists=True, dir_okay=dir_okay),
-            default=path,
-        )
+               # Check if it's SparkDataSource 
+        if isinstance(datasource, SparkDFDatasource):
+            # Checking it is an hdfs path
+            is_hdfs_path = click.prompt(msg_prompt_is_hdfs,type=int)
+            if is_hdfs_path == 1 :
+                while True:
+                    path = click.prompt(msg_prompt_file_path,type=str)
+                    if subprocess.call(["hdfs","dfs","-test","-e",path]) == 0:
+                        break
+                    cli_message("Path doens't exist")
+            else:
+   
+                path = click.prompt(
+                    msg_prompt_file_path,
+                    type=click.Path(exists=True, dir_okay=dir_okay),
+                    default=path,
+                )
 
-        path = os.path.abspath(path)
+                path = os.path.abspath(path)
 
         batch_kwargs = {"path": path, "datasource": datasource_name}
 
@@ -1074,6 +1091,7 @@ We could not determine the format of the file. What is it?
                         batch_kwargs["reader_options"] = {"header": header_row}
                     batch = datasource.get_batch(batch_kwargs=batch_kwargs)
                     break
+            
         else:
             # TODO: read the file and confirm with user that we read it correctly (headers, columns, etc.)
             try:
