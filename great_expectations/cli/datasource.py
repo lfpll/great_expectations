@@ -1091,6 +1091,7 @@ We could not determine the format of the file. What is it?
                         batch_kwargs["reader_options"] = {"header": header_row}
                     batch = datasource.get_batch(batch_kwargs=batch_kwargs)
                     break
+                break
             
         else:
             # TODO: read the file and confirm with user that we read it correctly (headers, columns, etc.)
